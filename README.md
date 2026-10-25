@@ -42,3 +42,34 @@ aiot-key-tracker-backend-01/
 ├── index.html            # Dashboard visual simples para testes locais
 ├── package.json
 └── tsconfig.json
+
+🚀 Como Executar o Projeto
+1. Clonar o Repositório e Instalar Dependências
+git clone [https://github.com/SEU-USUARIO/aiot-key-tracker-backend.git](https://github.com/SEU-USUARIO/aiot-key-tracker-backend.git)
+cd aiot-key-tracker-backend
+npm install
+
+2. Configurar Variáveis de Ambiente
+Crie um ficheiro .env na raiz do projeto contendo as seguintes variáveis:
+DATABASE_URL="file:./dev.db"
+PORT=3000
+
+3. Executar as Migrações do Banco de Dados
+npx prisma migrate dev
+npx prisma db seed
+
+4. Iniciar o Servidor
+# Modo de Desenvolvimento (Hot Reloading)
+npm run dev
+
+# Executar o Simulador de Telemetria (Em outro terminal)
+npx ts-node src/simulator.ts
+
+📌 Funcionalidades Principais
+[x] Ingestão em alta performance de dados de sensores BLE via HTTP Fastify.
+
+[x] Processamento e categorização do RSSI por Gateway/Ativo.
+
+[x] Modelagem relacional robusta via Prisma ORM.
+
+[x] Ferramentas de desenvolvimento integradas (Simulador CLI + Teste Visual HTML).
