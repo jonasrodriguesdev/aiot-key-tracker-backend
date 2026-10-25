@@ -1,0 +1,87 @@
+datasource db {
+  provider = "postgresql" 
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Nova tabela para separar os clientes (Empresas) no modelo B2B
+model Company {
+  id        String   @id @default(uuid())
+  name      String   // Nome da Empresa / Cliente
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nodes     Node[]
+  tags      Tag[]
+  assets    Asset[]
+}
+
+model LeituraSensor {
+  id        Int      @id @default(autoincrement())
+  tagId     String
+  comodo    String
+  rssi      Int
+  bateria   Int
+  timestamp DateTime @default(now())
+}
+
+// 1. Os ESP32s espalhados pelos locais (pertencem a uma empresa)
+model Node {
+  id           String        @id // <-- Aqui será o MAC address do ESP32 (ex: "24:6F:28:XX:XX:XX")
+  locationName String        // Ex: "Sala de Expedição", "Galpão A"
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relação com os logs gerados por este nó (opcional, se houver nodeId no log)
+  locationLogs LocationLog[] 
+}
+
+// 2. A iTag BLE física (pertence a uma empresa)
+model Tag {
+  id        String   @id // O MAC Address da iTag BLE
+  name      String?  // Apelido opcional
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  asset     Asset?
+}
+
+// 3. O Ativo real (pertence a uma empresa)
+model Asset {
+  id            String    @id @default(uuid())
+  name          String    // Nome do ativo
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  tagId         String?   @unique
+  tag           Tag?      @relation(fields: [tagId], references: [id], onDelete: SetNull)
+
+  currentNodeId String?
+  lastRssi      Int?
+  lastSeenAt    DateTime?
+
+  history       LocationLog[]
+}
+
+// 4. O rastro histórico
+model LocationLog {
+  id        String   @id @default(uuid())
+  
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  nodeId    String
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  
+  rssi      Int      // Força do sinal captado
+  timestamp DateTime @default(now())
+}

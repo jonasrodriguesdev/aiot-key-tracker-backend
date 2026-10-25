@@ -1,0 +1,35 @@
+# ==========================================
+# 1. Pastas do Sistema e Assistentes de IA
+# ==========================================
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+# ==========================================
+# 2. Segredos e Variáveis de Ambiente
+# ==========================================
+.env
+.env.*
+
+# ==========================================
+# 3. Banco de Dados Local (SQLite)
+# ==========================================
+dev.db
+*.db
+*.db-journal
+
+# ==========================================
+# 4. Dependências e Build de Código
+# ==========================================
+node_modules/
+dist/
+build/
+
+# ==========================================
+# 5. Logs e Arquivos do Sistema Operacional
+# ==========================================
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

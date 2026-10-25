@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel AIoT - Key Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 650px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #f4f4f9;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2, h3 { color: #333; text-align: center; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    select, input, button {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      margin-top: 10px;
+    }
+    button:hover { background-color: #0056b3; }
+    #resposta {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+      font-size: 14px;
+    }
+    .sucesso { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .erro { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+    /* Estilos para o Histórico */
+    .historico-section {
+      margin-top: 30px;
+      border-top: 2px solid #ddd;
+      padding-top: 20px;
+    }
+    .header-historico {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .btn-atualizar {
+      width: auto;
+      padding: 6px 12px;
+      background-color: #28a745;
+      margin-top: 0;
+    }
+    .btn-atualizar:hover { background-color: #218838; }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 14px;
+    }
+    th { background-color: #f0f0f0; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .rssi-forte { color: green; font-weight: bold; }
+    .rssi-fraco { color: red; font-weight: bold; }
+    .badge-live {
+      font-size: 12px;
+      color: #28a745;
+      margin-left: 8px;
+      animation: piscar 1.5s infinite;
+    }
+
+    @keyframes piscar {
+      0% { opacity: 1; }
+      50% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🔑 Simulador Manual da Chave</h2>
+
+  <form id="sensorForm">
+    <div class="form-group">
+      <label for="tagId">ID da Chave/Tag:</label>
+      <input type="text" id="tagId" value="chave-principal" required>
+    </div>
+
+    <div class="form-group">
+      <label for="comodo">Cômodo Atual:</label>
+      <select id="comodo" required>
+        <option value="Sala de Estar">Sala de Estar</option>
+        <option value="Cozinha">Cozinha</option>
+        <option value="Quarto Principal">Quarto Principal</option>
+        <option value="Escritório">Escritório</option>
+        <option value="Banheiro">Banheiro</option>
+        <option value="Varanda">Varanda</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="rssi">Sinal RSSI (-30 perto, -90 longe):</label>
+      <input type="number" id="rssi" value="-45" min="-100" max="-10" required>
+    </div>
+
+    <button type="submit">Enviar Leitura para o Backend</button>
+  </form>
+
+  <div id="resposta"></div>
+
+  <!-- SEÇÃO DO HISTÓRICO -->
+  <div class="historico-section">
+    <div class="header-historico">
+      <h3>📜 Histórico de Leituras (<span id="totalContador">0</span>) <span class="badge-live">● AO VIVO</span></h3>
+      <button type="button" class="btn-atualizar" onclick="carregarHistorico()">🔄 Atualizar</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#ID</th>
+          <th>Tag</th>
+          <th>Cômodo</th>
+          <th>Sinal RSSI</th>
+          <th>Horário</th>
+          <th>Data/Hora</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaCorpo">
+        <tr>
+          <td colspan="6" style="text-align: center;">Nenhuma leitura registrada ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+ <script>
+  const form = document.getElementById('sensorForm');
+  const respostaDiv = document.getElementById('resposta');
+  const tabelaCorpo = document.getElementById('tabelaCorpo');
+  const totalContador = document.getElementById('totalContador');
+
+  async function carregarHistorico() {
+    try {
+      // Força a buscar sem guardar em cache do navegador
+      const res = await fetch('http://127.0.0.1:3000/api/historico?t=' + Date.now());
+
+      // 1. Trata erros de status HTTP (400, 404, 500, etc.)
+      if (!res.ok) {
+        throw new Error(`Servidor respondeu com status ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (data.sucesso) {
+        totalContador.textContent = data.total;
+       
+        if (data.dados.length === 0) {
+          tabelaCorpo.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhuma leitura registrada ainda.</td></tr>';
+          return;
+        }
+
+        tabelaCorpo.innerHTML = data.dados.map(item => {
+          const dataHora = item.timestamp ? new Date(item.timestamp).toLocaleString('pt-BR') : '--:--:--';
+          const classeRssi = item.rssi >= -60 ? 'rssi-forte' : 'rssi-fraco';
+
+          return `
+            <tr>
+              <td>#${item.id}</td>
+              <td><strong>${item.tagId}</strong></td>
+              <td>${item.comodo}</td>
+              <td class="${classeRssi}">${item.rssi} dBm</td>
+              <td>🔋 ${item.bateria ?? 100}%</td> <!-- 👈 Bateria aqui! -->
+              <td>${dataHora}</td>
+            </tr>
+          `;
+        }).join('');
+
+        console.log(`[POLLING OK - ${new Date().toLocaleTimeString()}] Registros carregados:`, data.total);
+      }
+    } catch (err) {
+      console.error('❌ ERRO NO POLLING:', err);
+    }
+  }
+
+  // Envio manual pelo formulário
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      tagId: document.getElementById('tagId').value,
+      comodo: document.getElementById('comodo').value,
+      rssi: Number(document.getElementById('rssi').value),
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch('http://localhost:3000/api/sensor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      console.log('console aqui', data);
+      if (data.sucesso) {
+        respostaDiv.className = 'sucesso';
+        respostaDiv.style.display = 'block';
+        respostaDiv.textContent = `✅ Leitura #${data.dados.id} registrada!`;
+        carregarHistorico();
+      }
+    } catch (err) {
+      respostaDiv.className = 'erro';
+      respostaDiv.style.display = 'block';
+      respostaDiv.textContent = '❌ Erro ao enviar leitura.';
+    }
+  });
+
+  // Executa imediatamente e depois a cada 2 segundos
+  carregarHistorico();
+  setInterval(carregarHistorico, 2000);
+</script>
+
+</body>
+</html>
